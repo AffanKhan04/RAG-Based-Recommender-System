@@ -1,1 +1,4 @@
 .venv/
+*.parquet
+data/meta_Electronics.jsonl.gz
+utils/test_db.py
