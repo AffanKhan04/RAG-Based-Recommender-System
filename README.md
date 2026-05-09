@@ -35,7 +35,7 @@ The default LLM backend is a local **Ollama** endpoint using `qwen2.5:3b`.
 RAG-Based-Recommender-System-main/
 ├── app.py                          # Streamlit chat app
 ├── main.py                         # Placeholder entry file (currently empty)
-├── .env.example                    # Env template (Supabase + optional Ollama)
+├── .env                    # Env template (Supabase + optional Ollama)
 ├── requirements.txt
 ├── README.md
 ├── auth/
