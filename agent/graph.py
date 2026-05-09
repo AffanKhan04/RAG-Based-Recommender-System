@@ -1,6 +1,10 @@
 import os
 import sys
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 # 1. Force Python to look inside this specific folder first
 current_folder = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, current_folder)
@@ -25,64 +29,129 @@ INSTRUCTIONS:
 5. If the user is just saying hello, greet them back and ask what kind of electronics they are looking for.
 """
 
-def create_recommender_agent(model_name="qwen2.5:7b"):
-    """Creates the LangGraph agent connected to a local Ollama instance."""
-    
-    llm = ChatOpenAI(
-        model=model_name, 
-        api_key="ollama", 
-        base_url="http://localhost:11434/v1", 
-        temperature=0.3 
+
+def _ollama_chat_kwargs(model_name: str) -> dict:
+    """Resolved OpenAI-compatible settings for local Ollama from environment."""
+    base_url = (
+        os.getenv("OLLAMA_BASE_URL", "").strip() or "http://localhost:11434/v1"
     )
+    api_key = os.getenv("OLLAMA_API_KEY", "").strip() or "ollama"
+    return {
+        "model": model_name,
+        "api_key": api_key,
+        "base_url": base_url,
+        "temperature": 0.3,
+    }
+
+
+def create_recommender_agent(model_name: str | None = None):
+    """
+    Creates the LangGraph agent connected to a local Ollama instance.
+
+    Chroma retrieval and LangGraph ``create_react_agent`` wiring are unchanged;
+    only environment-driven Ollama connection settings differ from literals.
+    """
+    resolved_model = (
+        model_name
+        if model_name
+        else os.getenv("OLLAMA_MODEL", "").strip() or "qwen2.5:3b"
+    )
+
+    llm = ChatOpenAI(**_ollama_chat_kwargs(resolved_model))
 
     tools = [search_catalog]
 
-    # 3. We create the agent WITHOUT the modifier argument to avoid version errors
     agent_executor = create_react_agent(
-        llm, 
-        tools=tools
+        llm,
+        tools=tools,
     )
-    
+
     return agent_executor
 
+
+def resolve_system_prompt_for_user(user_id: str) -> str:
+    """
+    Base system prompt plus injected preference summary for ``user_id``.
+
+    Retrieval rules (tool use, tone) remain on the baseline ``SYSTEM_PROMPT``.
+    """
+    from memory.user_memory import build_memory_context
+
+    prefs_block = build_memory_context(user_id)
+    base = SYSTEM_PROMPT.strip()
+    if prefs_block.strip():
+        return base + "\n" + prefs_block.strip()
+    return base
+
+
+def invoke_recommender_with_memory(agent, user_id: str, user_input: str) -> str:
+    """
+    Run the recommender with prior DB history under system prompt extensions,
+    then persist this user turn and assistant reply.
+
+    Loads up to the last ``limit`` turns from Supabase before appending the
+    current ``user_input``. Does not alter Chroma retrieval or tool definitions.
+    """
+    from memory.user_memory import load_history, save_message
+
+    user_input_clean = user_input.strip()
+    if not user_input_clean:
+        return ""
+
+    system_text = resolve_system_prompt_for_user(user_id)
+    history = load_history(user_id, limit=20)
+
+    messages_payload = (
+        [SystemMessage(content=system_text)]
+        + history
+        + [HumanMessage(content=user_input_clean)]
+    )
+
+    result = agent.invoke({"messages": messages_payload})
+    final_answer = result["messages"][-1].content
+
+    save_message(user_id, "user", user_input_clean)
+    save_message(user_id, "assistant", final_answer)
+
+    return final_answer
+
+
 if __name__ == "__main__":
-    
-    OLLAMA_MODEL = "qwen2.5:7b" 
-    
+
+    OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "").strip() or "qwen2.5:3b"
+
     print("Initializing Agent. Connecting to local Ollama server...")
-    app = create_recommender_agent(model_name=OLLAMA_MODEL)
-    
+    app_local = create_recommender_agent(model_name=OLLAMA_MODEL)
+
     print("-" * 50)
     print("WELCOME TO THE ELECTRONICS RECOMMENDER")
     print("Type 'quit' or 'exit' to stop.")
     print("-" * 50)
-    
+
     while True:
         user_input = input("\nYou: ")
-        
-        if user_input.lower() in ['quit', 'exit']:
+
+        if user_input.lower() in ["quit", "exit"]:
             print("Goodbye.")
             break
-            
+
         if not user_input.strip():
             continue
-            
-        # 4. We inject the System Prompt directly into the message history here!
-        messages = {
+
+        messages_cli = {
             "messages": [
                 SystemMessage(content=SYSTEM_PROMPT),
-                HumanMessage(content=user_input)
+                HumanMessage(content=user_input),
             ]
         }
-        
+
         print("Agent: ", end="", flush=True)
-        
+
         try:
-            result = app.invoke(messages)
-            
-            final_answer = result["messages"][-1].content
-            print(final_answer + "\n")
-            
-        except Exception as e:
-            print(f"\nError connecting to local LLM: {e}")
+            result_cli = app_local.invoke(messages_cli)
+
+            print(result_cli["messages"][-1].content + "\n")
+
+        except Exception as e_cli:
+            print(f"\nError connecting to local LLM: {e_cli}")
             print("Tip: Make sure the Ollama application is running in the background.")
