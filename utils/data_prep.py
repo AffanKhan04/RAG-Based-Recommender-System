@@ -32,7 +32,6 @@ def clean_data(data_list):
 def process_in_chunks(file_path: str, output_path: str, chunk_size: int = 50000):
     print(f"Streaming ALL records from {file_path} in chunks of {chunk_size}...")
     
-    # Remove old file if it exists so we don't duplicate data
     if os.path.exists(output_path):
         os.remove(output_path)
         
@@ -45,12 +44,10 @@ def process_in_chunks(file_path: str, output_path: str, chunk_size: int = 50000)
         for line in f:
             data_chunk.append(json.loads(line))
             
-            # When chunk size is reached, clean and save
             if len(data_chunk) == chunk_size:
                 df = clean_data(data_chunk)
                 table = pa.Table.from_pandas(df, preserve_index=False) 
                 
-                # Initialize writer on the first chunk
                 if parquet_writer is None:
                     parquet_writer = pq.ParquetWriter(output_path, table.schema)
                     
@@ -58,12 +55,10 @@ def process_in_chunks(file_path: str, output_path: str, chunk_size: int = 50000)
                 
                 print(f"Processed chunk {chunk_counter} ({total_processed + len(df)} valid records saved so far)")
                 
-                # Reset for the next chunk
                 total_processed += len(df)
                 chunk_counter += 1
                 data_chunk = [] 
                 
-        # Process whatever is left over in the final chunk
         if len(data_chunk) > 0:
             df = clean_data(data_chunk)
             if not df.empty:
