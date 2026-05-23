@@ -1,6 +1,3 @@
-"""
-Persistent chat history and preferences in Supabase (PostgREST via supabase-py).
-"""
 
 from __future__ import annotations
 
@@ -24,18 +21,7 @@ def _format_storage_error(exc: BaseException, fallback: str) -> str:
 
 
 def save_message(user_id: str, role: str, content: str) -> None:
-    """
-    Persist one chat turn to ``public.chat_history``.
-
-    Args:
-        user_id: UUID string of the user.
-        role: ``'user'`` or ``'assistant'``.
-        content: Message text.
-
-    Raises:
-        ValueError: Invalid role or empty content.
-        RuntimeError: On Supabase errors.
-    """
+    
     if role not in ("user", "assistant"):
         raise ValueError("role must be 'user' or 'assistant'.")
     if not content or not str(content).strip():
@@ -54,15 +40,7 @@ def save_message(user_id: str, role: str, content: str) -> None:
 
 
 def load_history(user_id: str, limit: int = 20) -> List[LcMessage]:
-    """
-    Load recent messages for the user (newest-first query, reversed to chronological).
-
-    Returns:
-        LangChain ``HumanMessage`` / ``AIMessage`` objects oldest → newest.
-
-    Raises:
-        RuntimeError: On Supabase errors.
-    """
+    
     if limit < 1:
         limit = 1
     try:
@@ -90,14 +68,7 @@ def load_history(user_id: str, limit: int = 20) -> List[LcMessage]:
 
 
 def delete_all_chat_history(user_id: str) -> None:
-    """
-    Remove every ``chat_history`` row for ``user_id`` (fresh conversation in DB).
-
-    Does not alter ``user_preferences``.
-
-    Raises:
-        RuntimeError: On Supabase errors.
-    """
+    
     if not user_id or not str(user_id).strip():
         raise ValueError("user_id is required.")
     try:
@@ -108,13 +79,7 @@ def delete_all_chat_history(user_id: str) -> None:
 
 
 def update_preference(user_id: str, key: str, value: str) -> None:
-    """
-    Upsert a preference (`public.user_preferences` unique on ``user_id`` + ``preference_key``).
-
-    Raises:
-        ValueError: Missing key/value.
-        RuntimeError: On Supabase errors.
-    """
+    
     pref_key = (key or "").strip()
     pref_val = (value or "").strip()
     if not pref_key:
@@ -145,12 +110,7 @@ def update_preference(user_id: str, key: str, value: str) -> None:
 
 
 def get_preferences(user_id: str) -> Dict[str, str]:
-    """
-    Return all preferences for the user as ``{key: value}``.
-
-    Raises:
-        RuntimeError: On Supabase errors.
-    """
+    
     try:
         sb = get_supabase_client()
         result = (
@@ -172,11 +132,7 @@ def get_preferences(user_id: str) -> Dict[str, str]:
 
 
 def build_memory_context(user_id: str) -> str:
-    """
-    Build a short string of stored preferences for system-prompt injection.
-
-    Returns empty string when there are no preferences.
-    """
+    
     try:
         prefs = get_preferences(user_id)
     except RuntimeError:
