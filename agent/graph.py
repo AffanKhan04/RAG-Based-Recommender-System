@@ -5,7 +5,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# 1. Force Python to look inside this specific folder first
 current_folder = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, current_folder)
 
@@ -13,10 +12,8 @@ from langgraph.prebuilt import create_react_agent
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 
-# Import directly from tools
 from tools import search_catalog
 
-# 2. Define the System Prompt globally
 SYSTEM_PROMPT = """
 You are an expert Electronics Recommender Assistant. 
 Your goal is to help users find the best products based on their needs.
@@ -31,7 +28,6 @@ INSTRUCTIONS:
 
 
 def _ollama_chat_kwargs(model_name: str) -> dict:
-    """Resolved OpenAI-compatible settings for local Ollama from environment."""
     base_url = (
         os.getenv("OLLAMA_BASE_URL", "").strip() or "http://localhost:11434/v1"
     )
@@ -45,12 +41,6 @@ def _ollama_chat_kwargs(model_name: str) -> dict:
 
 
 def create_recommender_agent(model_name: str | None = None):
-    """
-    Creates the LangGraph agent connected to a local Ollama instance.
-
-    Chroma retrieval and LangGraph ``create_react_agent`` wiring are unchanged;
-    only environment-driven Ollama connection settings differ from literals.
-    """
     resolved_model = (
         model_name
         if model_name
@@ -70,11 +60,6 @@ def create_recommender_agent(model_name: str | None = None):
 
 
 def resolve_system_prompt_for_user(user_id: str) -> str:
-    """
-    Base system prompt plus injected preference summary for ``user_id``.
-
-    Retrieval rules (tool use, tone) remain on the baseline ``SYSTEM_PROMPT``.
-    """
     from memory.user_memory import build_memory_context
 
     prefs_block = build_memory_context(user_id)
@@ -85,13 +70,6 @@ def resolve_system_prompt_for_user(user_id: str) -> str:
 
 
 def invoke_recommender_with_memory(agent, user_id: str, user_input: str) -> str:
-    """
-    Run the recommender with prior DB history under system prompt extensions,
-    then persist this user turn and assistant reply.
-
-    Loads up to the last ``limit`` turns from Supabase before appending the
-    current ``user_input``. Does not alter Chroma retrieval or tool definitions.
-    """
     from memory.user_memory import load_history, save_message
 
     user_input_clean = user_input.strip()
