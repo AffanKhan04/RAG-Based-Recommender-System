@@ -132,4 +132,4 @@ if __name__ == "__main__":
 
         except Exception as e_cli:
             print(f"\nError connecting to local LLM: {e_cli}")
-            print("Tip: Make sure the Ollama application is running in the background.")
+            print("Tip: Make sure the Ollama application is running the background.")
