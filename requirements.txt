@@ -1,34 +1,25 @@
-# 1. Data Processing & Utilities
 pandas>=2.0.0
 tqdm>=4.66.0
 python-dotenv>=1.0.0
 
 
-# 2. Vector Database & Embeddings
 chromadb>=0.4.24
 sentence-transformers>=2.5.0
 
 
-# 3. Agent Orchestration (LangChain / LangGraph)
 langchain>=0.1.13
 langchain-core>=0.1.33
 langgraph>=0.0.30
 
 
-# 4. Memory (PostgreSQL)
 psycopg2-binary>=2.9.9
 langgraph-checkpoint-postgres>=1.0.0 
 
-# 5. LLM Integration (Qwen)
-# Note: If you are running Qwen locally via Ollama or vLLM, you will use the OpenAI compatible API.
 langchain-openai>=0.1.1   
 langchain-huggingface>=0.0.1
 
-# 6. Application UI
 streamlit>=1.35.0
 
-# 7. Parquet I/O
 pyarrow>=15.0.0
 
-# 8. Supabase (PostgREST — custom tables, app-side auth)
 supabase>=2.4.0
