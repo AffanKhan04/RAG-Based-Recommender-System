@@ -8,13 +8,11 @@ def build_local_db_fast(parquet_path, db_path, limit=5000):
     print(f"Loading {limit} records from {parquet_path}...")
     df = pd.read_parquet(parquet_path).head(limit)
     
-    # Ensure IDs are strings and unique
     df['asin'] = [f"prod_{i}" for i in range(len(df))]
     
     print(f"Creating Windows-native ChromaDB at {db_path}...")
     client = chromadb.PersistentClient(path=db_path)
     
-    # Use the same model to ensure consistency
     hf_ef = embedding_functions.SentenceTransformerEmbeddingFunction(model_name="all-MiniLM-L6-v2")
     
     collection = client.get_or_create_collection(
