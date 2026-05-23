@@ -1,10 +1,3 @@
-"""
-Manual sign-up and sign-in against custom `public.users` (plaintext passwords).
-
-Uses ``supabase-py`` with SUPABASE_URL and a privileged key (service_role recommended).
-
-``sign_out`` only clears Streamlit session state — there is no Supabase Auth session to revoke.
-"""
 
 from __future__ import annotations
 
@@ -18,7 +11,6 @@ import streamlit as st
 from dotenv import load_dotenv
 from supabase import Client, create_client
 
-# Streamlit often starts with CWD outside this folder, so a bare load_dotenv() misses .env.
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 load_dotenv(_PROJECT_ROOT / ".env")
 load_dotenv()
@@ -28,7 +20,6 @@ _SESSION_ACCESS_TOKEN_KEY = "access_token"
 
 
 def _is_dns_or_addr_failure(exc: BaseException) -> bool:
-    """True for Windows 11001 / getaddrinfo style failures (including wrapped causes)."""
     seen: set[int] = set()
     cur: Optional[BaseException] = exc
     while cur is not None and id(cur) not in seen:
@@ -45,7 +36,6 @@ def _is_dns_or_addr_failure(exc: BaseException) -> bool:
 
 
 def _format_supabase_error(exc: BaseException, fallback: str) -> str:
-    """Produce a concise user-visible message from Supabase/PostgREST errors."""
     msg = str(exc).strip() or fallback
     low = msg.lower()
 
@@ -75,17 +65,7 @@ def _format_supabase_error(exc: BaseException, fallback: str) -> str:
 
 
 def _rest_url_from_supabase_postgres_uri(raw: str) -> Optional[str]:
-    """
-    Map a Supabase Postgres / pooler URI to the HTTPS REST ``create_client`` URL.
-
-    Typical pooler string::
-
-        postgresql://postgres.<project_ref>:<db_password>@...pooler.supabase.com:5432/postgres
-
-    Returns::
-
-        https://<project_ref>.supabase.co
-    """
+    
     u = raw.strip().strip('"').strip("'")
     low = u.lower()
     if not low.startswith(("postgres://", "postgresql://")):
@@ -101,15 +81,7 @@ def _rest_url_from_supabase_postgres_uri(raw: str) -> Optional[str]:
 
 
 def _normalize_supabase_url(raw: str) -> str:
-    """
-    Strip whitespace/quotes, ensure scheme, validate host.
-
-    Example valid value: ``https://abcdefghijk.supabase.co``
-
-    Important: ``postgresql://...@pooler...`` URIs are **not** REST URLs — we
-    auto-convert common Supabase pooler strings where the username is
-    ``postgres.<PROJECT_REF>``.
-    """
+    
     u = raw.strip().strip('"').strip("'")
     if not u:
         return ""
@@ -138,13 +110,11 @@ def _normalize_supabase_url(raw: str) -> str:
         )
     host = parsed.netloc.split("@")[-1]
     if not host.endswith(".supabase.co") and "localhost" not in host:
-        # Still allow custom domains; warn only via valid parse
         pass
     return u.rstrip("/")
 
 
 def get_supabase_client() -> Client:
-    """Create a Supabase client from environment variables."""
     url = _normalize_supabase_url(os.getenv("SUPABASE_URL", ""))
     key = (
         os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip().strip('"').strip("'")
@@ -173,19 +143,12 @@ def get_supabase_client() -> Client:
 
 
 def get_current_user_id() -> Optional[str]:
-    """Return the logged-in user id from Streamlit session state, if any."""
     uid = st.session_state.get(_SESSION_USER_ID_KEY)
     return str(uid) if uid else None
 
 
 def sign_up(email: str, password: str) -> str:
-    """
-    Register a user by inserting into ``public.users``.
-
-    Raises:
-        ValueError: If email/password invalid or email already exists.
-        RuntimeError: On Supabase/PostgREST failures.
-    """
+    
     email_clean = email.strip().lower()
     password_str = password
     if not email_clean:
@@ -227,16 +190,7 @@ def sign_up(email: str, password: str) -> str:
 
 
 def sign_in(email: str, password: str) -> Dict[str, Any]:
-    """
-    Fetch user by email and verify plaintext password.
-
-    Returns:
-        Dict with keys: user_id (str), email (str).
-
-    Raises:
-        ValueError: On wrong credentials or missing input.
-        RuntimeError: On Supabase failures.
-    """
+    
     email_clean = email.strip().lower()
     if not email_clean:
         raise ValueError("Email is required.")
@@ -268,7 +222,6 @@ def sign_in(email: str, password: str) -> Dict[str, Any]:
 
 
 def sign_out() -> None:
-    """Clear session fields only (no server-side token revocation)."""
     for k in (
         _SESSION_USER_ID_KEY,
         _SESSION_ACCESS_TOKEN_KEY,
@@ -280,12 +233,7 @@ def sign_out() -> None:
 
 
 def issue_session_after_sign_in(user_id: str) -> str:
-    """
-    Store ``user_id`` and a synthetic ``access_token`` in session state.
-
-    This is an opaque client session id (not a Supabase JWT). Use your own signed
-    JWTs if you need RLS based on a ``user_id`` claim.
-    """
+    
     token = str(uuid.uuid4())
     st.session_state[_SESSION_USER_ID_KEY] = user_id
     st.session_state[_SESSION_ACCESS_TOKEN_KEY] = token
