@@ -24,7 +24,6 @@ _DEFAULT_MODEL = "qwen2.5:3b"
 
 
 def _populate_messages_from_database(user_id: str) -> None:
-    """Load recent chat turns from Supabase into session display state."""
     st.session_state.messages = []
     try:
         for msg in load_history(user_id, limit=100):
@@ -43,10 +42,8 @@ st.set_page_config(page_title="Electronics Recommender", layout="centered")
 
 
 def _ensure_session_defaults() -> None:
-    """Initialize mutable session defaults when missing."""
     if "authenticated" not in st.session_state:
         st.session_state.authenticated = False
-    # Radio mode is stored under this key (avoids st.toggle + value/rerun glitches).
     if "auth_mode_select" not in st.session_state:
         st.session_state.auth_mode_select = "Sign in"
     if "messages" not in st.session_state:
@@ -56,7 +53,6 @@ def _ensure_session_defaults() -> None:
 
 
 def _render_auth_screen() -> None:
-    """Login / Sign up form before chat is available."""
     st.title("Electronics Recommender")
     st.caption(
         "Sign in to keep your preferences and conversations across sessions (Supabase)."
@@ -104,7 +100,6 @@ def _render_auth_screen() -> None:
 
 
 def _render_chat_logged_in(user_id: str) -> None:
-    """Chat UI shown after authentication."""
     if st.session_state.pop("show_chat_cleared_banner", False):
         st.success("Chat history deleted. You are starting a new conversation.")
 
@@ -144,7 +139,6 @@ def _render_chat_logged_in(user_id: str) -> None:
 
 @st.cache_resource
 def get_agent():
-    """Return singleton LangGraph agent (Chroma-backed tools unchanged)."""
     model = os.getenv("OLLAMA_MODEL", "").strip() or _DEFAULT_MODEL
     return create_recommender_agent(model_name=model)
 
